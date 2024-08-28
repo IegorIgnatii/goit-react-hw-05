@@ -1,65 +1,58 @@
-import clsx from "clsx";
-import s from "./MoviesPage.module.css";
 import { useEffect, useState } from "react";
-import { Link, useLocation, useSearchParams } from "react-router-dom";
-import { fetchMoviesByQuery } from "../../services/api";
-import toast from "react-hot-toast";
-import Container from "../../components/Container/Container";
-import MoviesList from "../../components/MoviesList/MoviesList";
+import { useSearchParams } from "react-router-dom";
+import { searchMovies } from "../../service/api";
+import MovieList from "../../components/MovieList/MovieList";
+import css from "./MoviesPage.module.css";
 
 const MoviesPage = () => {
-  const [inputValue, setInputValue] = useState("");
-  const [movies, setMovies] = useState([]);
-
   const [searchParams, setSearchParams] = useSearchParams();
-
-  const location = useLocation();
-  const query = searchParams.get("query");
-  const notifyWrong = () => toast.error("Something went wrong");
-
-  const handleChangeInput = (e) => {
-    setInputValue(e.target.value);
-  };
-
-  const handleSearch = async () => {
-    if (!inputValue) return;
-    try {
-      searchParams.set("query", inputValue);
-      setSearchParams(searchParams);
-      const data = await fetchMoviesByQuery(inputValue);
-      setMovies(data.results);
-    } catch {
-      notifyWrong();
-    }
-  };
+  const [movies, setMovies] = useState([]);
+  const query = searchParams.get("query") ?? "";
 
   useEffect(() => {
-    if (!query) return;
-    const fetchData = async () => {
+    const fetchMovies = async () => {
+      if (!query) return;
+
       try {
-        const data = await fetchMoviesByQuery(query);
-        setMovies(data.results);
-      } catch {
-        notifyWrong();
+        const response = await searchMovies(query);
+        setMovies(response.data.results);
+      } catch (error) {
+        throw new Error(error.message);
       }
     };
-    fetchData();
+
+    fetchMovies();
   }, [query]);
 
-  useEffect(() => {
-    const query = searchParams.get("query") ?? "";
-    setInputValue(query);
-  }, [searchParams]);
+  const handleSubmit = (evt) => {
+    evt.preventDefault();
+    const form = evt.currentTarget;
+    const searchQuery = form.elements.query.value.trim();
+
+    if (searchQuery === "") {
+      return;
+    }
+
+    setSearchParams({ query: searchQuery });
+    form.reset();
+  };
 
   return (
-    <div className={clsx()}>
-      <Container>
-        <div className={clsx(s.form)}>
-          <input type="text" value={inputValue} onChange={handleChangeInput} />
-          <button onClick={handleSearch}>Search</button>
-        </div>
-        <MoviesList movies={movies} />
-      </Container>
+    <div className={css.boxSearchPage}>
+      <form onSubmit={handleSubmit}>
+        <input
+          className={css.inputSearch}
+          type="text"
+          name="query"
+          defaultValue={query}
+          placeholder="Search..."
+        />
+        <button className={css.btnSearch} type="submit">
+          Search
+        </button>
+      </form>
+
+      <MovieList movies={movies} />
     </div>
   );
 };
